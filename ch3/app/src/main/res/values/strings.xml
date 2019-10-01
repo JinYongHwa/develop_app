@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">test2</string>
+    <string-array name="chat_menu">
+        <item>삭제</item>
+        <item>수정</item>
+    </string-array>
+</resources>
