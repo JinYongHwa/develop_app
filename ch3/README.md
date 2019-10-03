@@ -1,115 +1,6 @@
-### AndroidManifest.xml
-``` xml
-<!--추가-->
- <uses-permission android:name="android.permission.INTERNET"></uses-permission>
-```
-
-### activity_main.xml
-``` xml
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    tools:context=".MainActivity" >
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/message_rv"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_weight="1" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
-
-        <EditText
-            android:id="@+id/message_tv"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:ems="10"
-            android:inputType="textPersonName" />
-
-        <Button
-            android:id="@+id/submit_btn"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="전송" />
-    </LinearLayout>
-</LinearLayout>
-```
-
-### item_message.xml
-``` xml
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/linearLayout"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:padding="10dp">
-
-    <TextView
-        android:id="@+id/message_tv"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:background="#eeee55"
-        android:padding="10dp"
-        android:text="안녕하세요"
-        tools:layout_conversion_absoluteHeight="56dp"
-        tools:layout_conversion_absoluteWidth="371dp"
-        tools:layout_editor_absoluteX="20dp"
-        tools:layout_editor_absoluteY="20dp" />
-
-    <TextView
-        android:id="@+id/time_tv"
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:gravity="bottom"
-        android:text="13:00"
-        tools:layout_conversion_absoluteHeight="56dp"
-        tools:layout_conversion_absoluteWidth="0dp"
-        tools:layout_editor_absoluteX="391dp"
-        tools:layout_editor_absoluteY="20dp" />
-
-    <View
-        android:id="@+id/view"
-        android:layout_width="30dp"
-        android:layout_height="match_parent"
-        tools:layout_conversion_absoluteHeight="56dp"
-        tools:layout_conversion_absoluteWidth="0dp"
-        tools:layout_editor_absoluteX="391dp"
-        tools:layout_editor_absoluteY="20dp" />
-</LinearLayout>
-```
-
-### Message.kt
-```
-import java.util.*
-
-class Message(var message:String="",var date:Date=Date(),var type:Int=1) {
-
-}
-```
-
 ### MessageAdapter.kt
+
 ``` kt
-
-import android.content.Context
-import android.util.Log
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.TextView
-import androidx.recyclerview.widget.RecyclerView
-
 class MessageAdapter(val context: Context,val messageList:ArrayList<Message> ) : RecyclerView.Adapter<MessageAdapter.ViewHolder>() {
     //ViewHolder 와 Message 인스턴스를 연결함
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
@@ -132,6 +23,11 @@ class MessageAdapter(val context: Context,val messageList:ArrayList<Message> ) :
         return messageList.size
     }
 
+
+    var itemClickListener: ItemClickListener? = null
+
+
+
     //한개의 아이템을 관리해주는 ViewHolder 클래스
     inner class ViewHolder(itemView: View?):RecyclerView.ViewHolder(itemView!!){
         var messageTv =itemView?.findViewById<TextView>(R.id.message_tv)
@@ -139,26 +35,36 @@ class MessageAdapter(val context: Context,val messageList:ArrayList<Message> ) :
         fun bind(message:Message){
             messageTv?.setText(message.message)
             timeTv?.setText(String.format("%02d:%02d",message.date.hours,message.date.minutes))
+            messageTv?.setOnLongClickListener {
+                longClick(message)
+                true
+            }
         }
+        fun longClick(message:Message){
+            itemClickListener?.onLongClick(message)
+        }
+
+    }
+    interface ItemClickListener{
+        fun onLongClick(message:Message)
     }
 }
 ```
 
+### strings.xml
+``` xml
+  
+<resources>
+    <string name="app_name">test2</string>
+    <string-array name="chat_menu">
+        <item>삭제</item>
+        <item>수정</item>
+    </string-array>
+</resources>
+```
+
 ### MainActivity.kt
 ``` kt
-
-import androidx.appcompat.app.AppCompatActivity
-import android.os.Bundle
-import android.util.Log
-import android.widget.Button
-import android.widget.EditText
-import android.widget.Toast
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.google.firebase.firestore.FirebaseFirestore
-import java.util.*
-import kotlin.collections.ArrayList
-
 class MainActivity : AppCompatActivity() {
 
     lateinit var firestore:FirebaseFirestore
@@ -167,10 +73,12 @@ class MainActivity : AppCompatActivity() {
     lateinit var messageList:ArrayList<Message>
     lateinit var messageRv:RecyclerView
     lateinit var messageAdapter: MessageAdapter
+    lateinit var instance:MainActivity
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        instance=this
 
         //채팅 메세지데이터를 관리하는 리스트 초기화
         messageList=ArrayList()
@@ -189,20 +97,68 @@ class MainActivity : AppCompatActivity() {
         firestore= FirebaseFirestore.getInstance()
 
         //Message Collection의 변경사항 리스너 등록
-        firestore?.collection("message").whereEqualTo("type",1).addSnapshotListener { querySnapshot, firebaseFirestoreException ->
+        firestore?.collection("message").addSnapshotListener { querySnapshot, firebaseFirestoreException ->
             if (querySnapshot != null) {
-                //변경사항을 메세지 리스트에 추가함
+
                 for(dc in querySnapshot.documentChanges){
-                    var message=dc.document.toObject(Message::class.java)
-                    messageList.add(message)
-                    messageAdapter.notifyDataSetChanged()
-                    messageRv.scrollToPosition(messageAdapter.itemCount-1)
+                    //Firebase에 추가된 메세지를 messageList에 추가
+                    if(dc.type==DocumentChange.Type.ADDED){
+                        var firebaseMessage=dc.document.toObject(Message::class.java)
+                        firebaseMessage.id=dc.document.id
+                        messageList.add(firebaseMessage)
+                        messageAdapter.notifyDataSetChanged()
+                        messageRv.scrollToPosition(messageAdapter.itemCount-1)
+                    }
+                    //Firebase에 삭제된 메세지를 messageList에서도 삭제
+                    if(dc.type==DocumentChange.Type.REMOVED){
+                        var findedMessage=messageList.filter{message-> message.id==dc.document.id}
+                        messageList.remove(findedMessage[0])
+                        messageAdapter.notifyDataSetChanged()
+                    }
+                    //Firebase에 수정된 메세지를 messageList에서도 수정
+                    if(dc.type==DocumentChange.Type.MODIFIED){
+                        var firebaseMessage=dc.document.toObject(Message::class.java)
+                        var findedMessage=messageList.filter{message-> message.id==dc.document.id}
+                        var messageIndex=messageList.indexOf(findedMessage[0])
+                        messageList.get(messageIndex).message=firebaseMessage.message
+                        messageAdapter.notifyDataSetChanged()
+                    }
+
                 }
             }
         }
 
         //전송 버튼을 눌렀을때
         submitBtn.setOnClickListener{ onClickSubmitBtn() }
+
+        //메세지를 길게 클릭했을때
+        messageAdapter.itemClickListener=object : MessageAdapter.ItemClickListener {
+            override fun onLongClick(message: Message) {
+
+                AlertDialog.Builder(instance)
+                    .setItems(R.array.chat_menu,{dialog,which->
+                        if(which==0){
+                           firestore?.collection("message").document(message.id).delete()
+                        }
+                        else if(which==1){
+                            val input = EditText(instance)
+                            AlertDialog.Builder(instance)
+                                .setView(input)
+                                .setPositiveButton("확인",{dialog, which ->
+                                    firestore?.collection("message").document(message.id).update("message",input.text.toString())
+                                    dialog.dismiss()
+                                })
+                                .show()
+                        }
+                    })
+                    .setNegativeButton("취소",{dialog,which->
+                        dialog.dismiss()
+                    })
+                    .show()
+
+
+            }
+        }
 
     }
 
@@ -224,5 +180,4 @@ class MainActivity : AppCompatActivity() {
             }
     }
 }
-
 ```
