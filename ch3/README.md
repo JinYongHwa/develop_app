@@ -63,6 +63,15 @@ class MessageAdapter(val context: Context,val messageList:ArrayList<Message> ) :
 </resources>
 ```
 
+### Message.kt
+``` kt
+import java.util.*
+
+class Message(var message:String="",var date:Date=Date(),var type:Int=1,var id:String="") {
+
+}
+```
+
 ### MainActivity.kt
 ``` kt
 class MainActivity : AppCompatActivity() {
