@@ -189,7 +189,7 @@ class MainActivity : AppCompatActivity() {
         firestore= FirebaseFirestore.getInstance()
 
         //Message Collection의 변경사항 리스너 등록
-        firestore?.collection("message").whereEqualTo("type",1).addSnapshotListener { querySnapshot, firebaseFirestoreException ->
+        firestore?.collection("message").addSnapshotListener { querySnapshot, firebaseFirestoreException ->
             if (querySnapshot != null) {
                 //변경사항을 메세지 리스트에 추가함
                 for(dc in querySnapshot.documentChanges){
