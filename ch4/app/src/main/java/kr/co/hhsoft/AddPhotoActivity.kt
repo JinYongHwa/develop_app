@@ -3,13 +3,12 @@ package kr.co.hhsoft
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.os.PersistableBundle
+import android.util.Log
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.core.FirestoreClient
 import com.google.firebase.storage.FirebaseStorage
 import java.text.SimpleDateFormat
 import java.util.*
@@ -53,12 +52,18 @@ class AddPhotoActivity: AppCompatActivity() {
         val storeageRef=storage.getReference().child("image").child(imageFileName)
         storeageRef.putFile(imageUri!!).addOnSuccessListener {
             taskSnapshot ->
-            val content=Content(descriptionTv.text.toString(),imageUri.toString())
-            firestore.document("content").set(content)
-                .addOnSuccessListener { Unit->
-                    setResult(RESULT_OK)
-                    finish()
-                }
+
+            taskSnapshot.metadata?.reference?.downloadUrl?.addOnSuccessListener {
+                it->
+                val photo=Photo(descriptionTv.text.toString(),it.toString())
+                firestore.collection("photo").document().set(photo)
+                    .addOnSuccessListener { Unit->
+                        setResult(RESULT_OK)
+                        finish()
+                    }
+            }
+
+
         }
     }
     fun pickImage(){
