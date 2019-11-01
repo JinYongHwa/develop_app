@@ -17,6 +17,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".AddPhotoActivity"></activity>
+        <activity android:name=".PhotoActivity"></activity>
     </application>
 
 </manifest>

@@ -9,10 +9,14 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 
 class PhotoAdapter(var context: Context, var photoList:ArrayList<Photo> ) : RecyclerView.Adapter<PhotoAdapter.ViewHolder>() {
+
+    var onPhotoClickListener:OnPhotoClickListener?=null
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         var itemVIew=LayoutInflater.from(context).inflate(R.layout.item_photo,parent,false)
         return ViewHolder(itemVIew)
     }
+
+
 
     override fun getItemCount(): Int {
         return photoList.size
@@ -26,6 +30,20 @@ class PhotoAdapter(var context: Context, var photoList:ArrayList<Photo> ) : Recy
         var imageIv: ImageView =itemView.findViewById(R.id.image_iv)
         fun bind(content:Photo){
             Glide.with(itemView).load(content.imageUrl).into(imageIv)
+            imageIv.setOnClickListener{
+                if(onPhotoClickListener!=null){
+                    onPhotoClickListener?.onClick(content)
+                }
+            }
+
+
         }
+
     }
+
+}
+
+
+interface OnPhotoClickListener{
+    fun onClick(photo:Photo)
 }

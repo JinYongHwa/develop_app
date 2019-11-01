@@ -9,7 +9,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.FirebaseFirestore
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(),OnPhotoClickListener {
+
 
     lateinit var addPhotoBtn: Button
     lateinit var photoRv:RecyclerView
@@ -31,6 +32,7 @@ class MainActivity : AppCompatActivity() {
         photoList=ArrayList()
         photoAdapter= PhotoAdapter(this,photoList)
         photoRv.adapter=photoAdapter
+        photoAdapter.onPhotoClickListener=this
         photoRv.layoutManager= GridLayoutManager(this,3)
         firestore.collection("photo").addSnapshotListener{
             querySnapshot, firebaseFirestoreException ->
@@ -38,6 +40,7 @@ class MainActivity : AppCompatActivity() {
                 for(dc in querySnapshot.documentChanges){
                     if(dc.type== DocumentChange.Type.ADDED){
                         var photo=dc.document.toObject(Photo::class.java)
+                        photo.id=dc.document.id
                         photoList.add(photo)
                         photoAdapter.notifyDataSetChanged()
                     }
@@ -50,6 +53,10 @@ class MainActivity : AppCompatActivity() {
         var intent= Intent(this,AddPhotoActivity::class.java)
         startActivity(intent)
     }
-
+    override fun onClick(photo: Photo) {
+        var intent=Intent(this,PhotoActivity::class.java)
+        intent.putExtra("id",photo.id)
+        startActivity(intent)
+    }
 
 }
