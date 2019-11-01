@@ -156,19 +156,15 @@ class AddPhotoActivity: AppCompatActivity() {
 
 ### PhotoAdapter.kt
 ``` kt
-import android.content.Context
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.ImageView
-import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
-
 class PhotoAdapter(var context: Context, var photoList:ArrayList<Photo> ) : RecyclerView.Adapter<PhotoAdapter.ViewHolder>() {
+
+    var onPhotoClickListener:OnPhotoClickListener?=null
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         var itemVIew=LayoutInflater.from(context).inflate(R.layout.item_photo,parent,false)
         return ViewHolder(itemVIew)
     }
+
+
 
     override fun getItemCount(): Int {
         return photoList.size
@@ -182,8 +178,22 @@ class PhotoAdapter(var context: Context, var photoList:ArrayList<Photo> ) : Recy
         var imageIv: ImageView =itemView.findViewById(R.id.image_iv)
         fun bind(content:Photo){
             Glide.with(itemView).load(content.imageUrl).into(imageIv)
+            imageIv.setOnClickListener{
+                if(onPhotoClickListener!=null){
+                    onPhotoClickListener?.onClick(content)
+                }
+            }
+
+
         }
+
     }
+
+}
+
+
+interface OnPhotoClickListener{
+    fun onClick(photo:Photo)
 }
 ```
 ### activity_main.xml
@@ -215,16 +225,8 @@ class PhotoAdapter(var context: Context, var photoList:ArrayList<Photo> ) : Recy
 
 ### MainActivity.kt
 ``` kt
-import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
-import android.os.Bundle
-import android.widget.Button
-import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.google.firebase.firestore.DocumentChange
-import com.google.firebase.firestore.FirebaseFirestore
+class MainActivity : AppCompatActivity(),OnPhotoClickListener {
 
-class MainActivity : AppCompatActivity() {
 
     lateinit var addPhotoBtn: Button
     lateinit var photoRv:RecyclerView
@@ -246,6 +248,7 @@ class MainActivity : AppCompatActivity() {
         photoList=ArrayList()
         photoAdapter= PhotoAdapter(this,photoList)
         photoRv.adapter=photoAdapter
+        photoAdapter.onPhotoClickListener=this
         photoRv.layoutManager= GridLayoutManager(this,3)
         firestore.collection("photo").addSnapshotListener{
             querySnapshot, firebaseFirestoreException ->
@@ -253,6 +256,7 @@ class MainActivity : AppCompatActivity() {
                 for(dc in querySnapshot.documentChanges){
                     if(dc.type== DocumentChange.Type.ADDED){
                         var photo=dc.document.toObject(Photo::class.java)
+                        photo.id=dc.document.id
                         photoList.add(photo)
                         photoAdapter.notifyDataSetChanged()
                     }
@@ -265,7 +269,63 @@ class MainActivity : AppCompatActivity() {
         var intent= Intent(this,AddPhotoActivity::class.java)
         startActivity(intent)
     }
+    override fun onClick(photo: Photo) {
+        var intent=Intent(this,PhotoActivity::class.java)
+        intent.putExtra("id",photo.id)
+        startActivity(intent)
+    }
 
+}
+```
+```class MainActivity : AppCompatActivity(),OnPhotoClickListener {
+
+
+    lateinit var addPhotoBtn: Button
+    lateinit var photoRv:RecyclerView
+
+    lateinit var photoList:ArrayList<Photo>
+    lateinit var photoAdapter:PhotoAdapter
+    lateinit var firestore:FirebaseFirestore
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        firestore= FirebaseFirestore.getInstance()
+        addPhotoBtn=findViewById(R.id.add_photo_btn)
+        photoRv=findViewById(R.id.photo_rv)
+
+        addPhotoBtn.setOnClickListener{ addPhoto() }
+
+        photoList=ArrayList()
+        photoAdapter= PhotoAdapter(this,photoList)
+        photoRv.adapter=photoAdapter
+        photoAdapter.onPhotoClickListener=this
+        photoRv.layoutManager= GridLayoutManager(this,3)
+        firestore.collection("photo").addSnapshotListener{
+            querySnapshot, firebaseFirestoreException ->
+            if(querySnapshot!=null){
+                for(dc in querySnapshot.documentChanges){
+                    if(dc.type== DocumentChange.Type.ADDED){
+                        var photo=dc.document.toObject(Photo::class.java)
+                        photo.id=dc.document.id
+                        photoList.add(photo)
+                        photoAdapter.notifyDataSetChanged()
+                    }
+                }
+            }
+        }
+    }
+
+    fun addPhoto(){
+        var intent= Intent(this,AddPhotoActivity::class.java)
+        startActivity(intent)
+    }
+    override fun onClick(photo: Photo) {
+        var intent=Intent(this,PhotoActivity::class.java)
+        intent.putExtra("id",photo.id)
+        startActivity(intent)
+    }
 
 }
 ```
@@ -280,3 +340,78 @@ class Photo(
       var date: Date=Date()) {}
 ```
  
+ 
+ ### PhotoActivity.kt
+ ``` kt
+ class AddPhotoActivity: AppCompatActivity() {
+
+    lateinit var imageIv:ImageView
+    lateinit var descriptionTv:TextView
+    lateinit var submitBtn: Button
+
+    lateinit var storage: FirebaseStorage
+    lateinit var firestore:FirebaseFirestore
+
+    val PICK_IMAGE_FROM_ALBUM=1001
+
+    var imageUri: Uri?=null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_add_photo)
+
+        imageIv=findViewById(R.id.image_iv)
+        descriptionTv=findViewById(R.id.description_tv)
+        submitBtn=findViewById(R.id.submit_btn)
+
+        storage= FirebaseStorage.getInstance()
+        firestore=FirebaseFirestore.getInstance()
+
+
+        submitBtn.setOnClickListener{ submit() }
+        imageIv.setOnClickListener{ pickImage() }
+    }
+
+
+    fun submit(){
+        if(imageUri==null){
+            return
+        }
+        val timestamp=SimpleDateFormat("yyyyMMddHHmmss").format(Date())
+        val imageFileName="JPEG_"+timestamp+"_.png"
+        val storeageRef=storage.getReference().child("image").child(imageFileName)
+        storeageRef.putFile(imageUri!!).addOnSuccessListener {
+            taskSnapshot ->
+
+            taskSnapshot.metadata?.reference?.downloadUrl?.addOnSuccessListener {
+                it->
+                val photo=Photo(descriptionTv.text.toString(),it.toString())
+                firestore.collection("photo").document().set(photo)
+                    .addOnSuccessListener { Unit->
+                        setResult(RESULT_OK)
+                        finish()
+                    }
+            }
+
+
+        }
+    }
+    fun pickImage(){
+        var intent=Intent(Intent.ACTION_PICK)
+        intent.type="image/*"
+        startActivityForResult(intent,PICK_IMAGE_FROM_ALBUM)
+    }
+
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if(requestCode==PICK_IMAGE_FROM_ALBUM&&resultCode==RESULT_OK){
+            imageIv.setImageURI(data?.data)
+            imageUri=data?.data
+
+        }
+    }
+
+
+}
+```
