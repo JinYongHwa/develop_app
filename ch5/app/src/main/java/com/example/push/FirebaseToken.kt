@@ -1,4 +1,7 @@
 package com.example.push
 
-class FirebaseToken {
+class FirebaseToken(var token:String="",var allow:Boolean=true) {
+
+
+
 }
