@@ -137,9 +137,11 @@ firestore.collection("FirebaseToken").where("allow","==",true).get()
     admin.messaging().sendMulticast(messages).then((response) => {
       // Response is a message ID string.
       console.log('Successfully sent message:', response);
+      process.exit()
     })
     .catch((error) => {
       console.log('Error sending message:', error);
+      process.exit()
     });
   }
 
