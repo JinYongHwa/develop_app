@@ -1,3 +1,11 @@
+### build.gradle(Module: app)
+``` gradle
+dependencies {
+    implementation 'com.google.android.gms:play-services-auth:17.0.0'
+}
+```
+
+
 ### activity_login.xml
 ``` xml
 <?xml version="1.0" encoding="utf-8"?>
