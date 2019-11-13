@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "827381716448",
+    "firebase_url": "https://mjstagram.firebaseio.com",
+    "project_id": "mjstagram",
+    "storage_bucket": "mjstagram.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:827381716448:android:2e46883948585ca453c785",
+        "android_client_info": {
+          "package_name": "kr.co.hhsoft.mjstagram"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "827381716448-9m2looeb1itdvn14n98tm3usdsh2ac49.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "kr.co.hhsoft.mjstagram",
+            "certificate_hash": "d74a1d79bfe96a1c83428cbc3165225d196a1692"
+          }
+        },
+        {
+          "client_id": "827381716448-dmb8681i60h8n4rk1odt6kqqc0tjsqpg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA0ZVUyEnkGPSI_thKUoNlVyNnA4-HVS_o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "827381716448-dmb8681i60h8n4rk1odt6kqqc0tjsqpg.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
