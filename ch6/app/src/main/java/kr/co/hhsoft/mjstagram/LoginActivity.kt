@@ -17,6 +17,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.firestore.FirebaseFirestore
 
 class LoginActivity : AppCompatActivity() {
 
@@ -24,15 +25,12 @@ class LoginActivity : AppCompatActivity() {
     lateinit var passwordEt:EditText
 
     lateinit var emailLoginBtn: Button
-    lateinit var googleLoginBtn:Button
 
     lateinit var loadingPb:ProgressBar
 
     lateinit var auth: FirebaseAuth
-    lateinit var googleSignInClient: GoogleSignInClient
 
-    val GOOGLE_LOGIN=1000
-
+    lateinit var firestore:FirebaseFirestore
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,33 +39,23 @@ class LoginActivity : AppCompatActivity() {
         emailEt=findViewById(R.id.email_et)
         passwordEt=findViewById(R.id.password_et)
         emailLoginBtn=findViewById(R.id.email_login_btn)
-        googleLoginBtn=findViewById(R.id.google_login_btn)
+
         loadingPb=findViewById(R.id.loading_pb)
 
         auth= FirebaseAuth.getInstance()
+        firestore= FirebaseFirestore.getInstance()
 
-        var gso=GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(getString(R.string.default_web_client_id))
-            .requestEmail()
-            .build()
-        googleSignInClient= GoogleSignIn.getClient(this,gso)
+
 
         emailLoginBtn.setOnClickListener {
             emailLogin()
         }
 
-        googleLoginBtn.setOnClickListener{
-            googleLogin()
-        }
 
         moveMain(auth.currentUser)
 
     }
 
-    fun googleLogin(){
-        var signInIntent=googleSignInClient?.signInIntent
-        startActivityForResult(signInIntent,GOOGLE_LOGIN)
-    }
     fun startLoading(){
         loadingPb.visibility=VISIBLE
     }
@@ -90,7 +78,16 @@ class LoginActivity : AppCompatActivity() {
                 task->
                 endLoading()
                 if(task.isSuccessful){
-                    moveMain(auth.currentUser)
+
+                    var user=User(auth.currentUser?.email!!)
+                    startLoading()
+                    firestore.collection("User").document().set(user)
+                        .addOnCompleteListener {
+                            task->
+                            endLoading()
+                            moveMain(auth.currentUser)
+                        }
+
                 }
                 //로그인시 오류가 발생했을경우
                 else if(task.exception?.message.isNullOrEmpty()){
@@ -135,26 +132,5 @@ class LoginActivity : AppCompatActivity() {
             finish()
         }
     }
-    fun firebaseAuthWithGoogle(account: GoogleSignInAccount){
-        var credetial= GoogleAuthProvider.getCredential(account.idToken,null)
-        auth?.signInWithCredential(credetial)
-            ?.addOnCompleteListener{task->
-                if(task.isSuccessful){
-                    endLoading()
-                    moveMain(auth.currentUser)
-                }
-            }
-    }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if(requestCode==GOOGLE_LOGIN&&resultCode==RESULT_OK){
-            startLoading()
-            var result= Auth.GoogleSignInApi.getSignInResultFromIntent(data)
-            if(result.isSuccess){
-                var account=result.signInAccount
-                firebaseAuthWithGoogle(account!!)
-            }
-        }
-    }
 }

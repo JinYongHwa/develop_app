@@ -35,12 +35,6 @@
             android:layout_height="wrap_content"
             android:text="이메일로 로그인" />
 
-        <Button
-            android:id="@+id/google_login_btn"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="30dp"
-            android:text="구글 아이디로 로그인" />
     </LinearLayout>
 
     <ProgressBar
