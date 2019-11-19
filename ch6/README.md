@@ -389,6 +389,7 @@ class ProfileFragment : Fragment() {
 
 ### AddFragment.kt
 ``` kt
+
 class AddFragment : Fragment() {
 
     lateinit var imageIv:ImageView
@@ -468,9 +469,6 @@ class AddFragment : Fragment() {
                         it.metadata?.reference?.downloadUrl?.addOnSuccessListener {
                                 downloadUrl->
                             post.imageUrl=downloadUrl.toString()
-//                            user?.imageUrl=downloadUrl.toString()
-//                            firestore.collection("User").document(user?.email!!).set(user!!)
-
 
                         }
                     }
