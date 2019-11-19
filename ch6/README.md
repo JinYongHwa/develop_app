@@ -131,15 +131,12 @@ class LoginActivity : AppCompatActivity() {
     lateinit var passwordEt:EditText
 
     lateinit var emailLoginBtn: Button
-    lateinit var googleLoginBtn:Button
 
     lateinit var loadingPb:ProgressBar
 
     lateinit var auth: FirebaseAuth
-    lateinit var googleSignInClient: GoogleSignInClient
 
-    val GOOGLE_LOGIN=1000
-
+    lateinit var firestore:FirebaseFirestore
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -148,33 +145,23 @@ class LoginActivity : AppCompatActivity() {
         emailEt=findViewById(R.id.email_et)
         passwordEt=findViewById(R.id.password_et)
         emailLoginBtn=findViewById(R.id.email_login_btn)
-        googleLoginBtn=findViewById(R.id.google_login_btn)
+
         loadingPb=findViewById(R.id.loading_pb)
 
         auth= FirebaseAuth.getInstance()
+        firestore= FirebaseFirestore.getInstance()
 
-        var gso=GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(getString(R.string.default_web_client_id))
-            .requestEmail()
-            .build()
-        googleSignInClient= GoogleSignIn.getClient(this,gso)
+
 
         emailLoginBtn.setOnClickListener {
             emailLogin()
         }
 
-        googleLoginBtn.setOnClickListener{
-            googleLogin()
-        }
 
         moveMain(auth.currentUser)
 
     }
 
-    fun googleLogin(){
-        var signInIntent=googleSignInClient?.signInIntent
-        startActivityForResult(signInIntent,GOOGLE_LOGIN)
-    }
     fun startLoading(){
         loadingPb.visibility=VISIBLE
     }
@@ -197,7 +184,16 @@ class LoginActivity : AppCompatActivity() {
                 task->
                 endLoading()
                 if(task.isSuccessful){
-                    moveMain(auth.currentUser)
+
+                    var user=User(auth.currentUser?.email!!)
+                    startLoading()
+                    firestore.collection("User").document(auth.currentUser?.email!!).set(user)
+                        .addOnCompleteListener {
+                            task->
+                            endLoading()
+                            moveMain(auth.currentUser)
+                        }
+
                 }
                 //로그인시 오류가 발생했을경우
                 else if(task.exception?.message.isNullOrEmpty()){
@@ -242,28 +238,7 @@ class LoginActivity : AppCompatActivity() {
             finish()
         }
     }
-    fun firebaseAuthWithGoogle(account: GoogleSignInAccount){
-        var credetial= GoogleAuthProvider.getCredential(account.idToken,null)
-        auth?.signInWithCredential(credetial)
-            ?.addOnCompleteListener{task->
-                if(task.isSuccessful){
-                    endLoading()
-                    moveMain(auth.currentUser)
-                }
-            }
-    }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if(requestCode==GOOGLE_LOGIN&&resultCode==RESULT_OK){
-            startLoading()
-            var result= Auth.GoogleSignInApi.getSignInResultFromIntent(data)
-            if(result.isSuccess){
-                var account=result.signInAccount
-                firebaseAuthWithGoogle(account!!)
-            }
-        }
-    }
 }
 ```
 
@@ -274,6 +249,7 @@ class MainActivity : AppCompatActivity() {
     lateinit var viewPager: ViewPager
     lateinit var tabLayout:TabLayout
     lateinit var mainPageAdapter:MainPageAdapter
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -292,8 +268,11 @@ class MainActivity : AppCompatActivity() {
         tabLayout.getTabAt(3)?.setIcon(R.drawable.baseline_star_border_black_48)
         tabLayout.getTabAt(4)?.setIcon(R.drawable.baseline_person_outline_black_48)
 
-
     }
+    fun moveTab(index:Int){
+        viewPager.setCurrentItem(index)
+    }
+
 }
 ```
 
@@ -325,4 +304,179 @@ class HomeFragment: Fragment() {
 
 }
 ```
+### ProfileFragment.kt
+``` kt
+class ProfileFragment : Fragment() {
+    lateinit var profileIv: ImageView
+    lateinit var emailTv: TextView
 
+    lateinit var auth: FirebaseAuth
+    lateinit var firestore:FirebaseFirestore
+    lateinit var storage:FirebaseStorage
+
+    var user:User?=null
+
+    val IMAGE_PICK=1001
+
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        auth= FirebaseAuth.getInstance()
+        firestore= FirebaseFirestore.getInstance()
+        storage= FirebaseStorage.getInstance()
+
+
+        var view= inflater.inflate(R.layout.fragment_profile,container,false)
+
+        profileIv= view.findViewById(R.id.profile_iv)
+        emailTv= view.findViewById(R.id.email_tv)
+        emailTv.text=auth.currentUser?.email
+
+        return view
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        firestore.collection("User").document(auth.currentUser?.email!!)
+            .get().addOnSuccessListener {
+                task->
+                user=task.toObject(User::class.java)
+                if(user?.imageUrl != null){
+                    Glide.with(profileIv).load(user?.imageUrl).into(profileIv)
+                }
+
+            }
+
+        profileIv.setOnClickListener{
+            var intent= Intent(ACTION_PICK)
+            intent.type="image/*"
+            startActivityForResult(intent,IMAGE_PICK)
+        }
+
+        super.onCreate(savedInstanceState)
+    }
+
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if(requestCode== IMAGE_PICK && resultCode== AppCompatActivity.RESULT_OK) {
+            var imageUri=data?.data
+            profileIv.setImageURI(imageUri)
+            if(imageUri!=null){
+                storage.getReference().child("profile").child(auth.currentUser?.email!!).putFile(imageUri)
+                    .addOnSuccessListener {
+                        it->
+                        it.metadata?.reference?.downloadUrl?.addOnSuccessListener {
+                            downloadUrl->
+                            user?.imageUrl=downloadUrl.toString()
+                            firestore.collection("User").document(user?.email!!).set(user!!)
+
+
+                        }
+                    }
+            }
+
+
+        }
+    }
+
+}
+```
+
+### AddFragment.kt
+``` kt
+class AddFragment : Fragment() {
+
+    lateinit var imageIv:ImageView
+    lateinit var descriptionEt: EditText
+    lateinit var uploadBtn: Button
+
+    lateinit var auth: FirebaseAuth
+    lateinit var firestore: FirebaseFirestore
+    lateinit var storage: FirebaseStorage
+
+    val IMAGE_PICK=1001
+
+    lateinit var post:Post
+
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+
+        auth= FirebaseAuth.getInstance()
+        firestore= FirebaseFirestore.getInstance()
+        storage= FirebaseStorage.getInstance()
+
+        post=Post()
+
+
+        var view=inflater.inflate(R.layout.fragment_add,container,false)
+
+        imageIv=view.findViewById(R.id.image_iv)
+        descriptionEt=view.findViewById(R.id.description_et)
+        uploadBtn=view.findViewById(R.id.upload_btn)
+
+
+
+
+        return view
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        imageIv.setOnClickListener{
+            var intent= Intent(ACTION_PICK)
+            intent.type="image/*"
+            startActivityForResult(intent,IMAGE_PICK)
+        }
+        uploadBtn.setOnClickListener {
+            var description=descriptionEt.text.toString()
+            if(description.equals("")){
+                Toast.makeText(activity,"문구를 입력해주세요",Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            post.description=description
+            post.userId=auth.currentUser?.email
+            firestore.collection("Post").document().set(post)
+                .addOnSuccessListener {
+                    imageIv.setImageDrawable(activity?.resources?.getDrawable(R.drawable.baseline_add_circle_outline_black_48))
+                    descriptionEt.text.clear()
+                    var mainActivity=activity as MainActivity
+                    mainActivity.moveTab(0)
+                }
+        }
+
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if(requestCode==IMAGE_PICK&&resultCode==RESULT_OK){
+            var imageUri=data?.data
+            imageIv.setImageURI(imageUri)
+            if(imageUri!=null){
+
+                storage.getReference().child("post").child(UUID.randomUUID().toString()).putFile(imageUri)
+                    .addOnSuccessListener {
+                            it->
+                        it.metadata?.reference?.downloadUrl?.addOnSuccessListener {
+                                downloadUrl->
+                            post.imageUrl=downloadUrl.toString()
+//                            user?.imageUrl=downloadUrl.toString()
+//                            firestore.collection("User").document(user?.email!!).set(user!!)
+
+
+                        }
+                    }
+            }
+        }
+    }
+
+}
+```
