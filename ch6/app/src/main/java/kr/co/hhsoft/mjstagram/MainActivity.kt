@@ -1,7 +1,9 @@
 package kr.co.hhsoft.mjstagram
 
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import androidx.viewpager.widget.ViewPager
 import com.google.android.material.tabs.TabLayout
 import com.google.firebase.firestore.FirebaseFirestore
@@ -11,7 +13,6 @@ class MainActivity : AppCompatActivity() {
     lateinit var viewPager: ViewPager
     lateinit var tabLayout:TabLayout
     lateinit var mainPageAdapter:MainPageAdapter
-
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,6 +32,9 @@ class MainActivity : AppCompatActivity() {
         tabLayout.getTabAt(3)?.setIcon(R.drawable.baseline_star_border_black_48)
         tabLayout.getTabAt(4)?.setIcon(R.drawable.baseline_person_outline_black_48)
 
-
     }
+    fun moveTab(index:Int){
+        viewPager.setCurrentItem(index)
+    }
+
 }

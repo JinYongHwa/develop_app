@@ -81,7 +81,7 @@ class LoginActivity : AppCompatActivity() {
 
                     var user=User(auth.currentUser?.email!!)
                     startLoading()
-                    firestore.collection("User").document().set(user)
+                    firestore.collection("User").document(auth.currentUser?.email!!).set(user)
                         .addOnCompleteListener {
                             task->
                             endLoading()

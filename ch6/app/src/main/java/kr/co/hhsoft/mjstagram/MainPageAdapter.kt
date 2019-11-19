@@ -20,7 +20,7 @@ class MainPageAdapter(fragmentManager: FragmentManager) : FragmentPagerAdapter(f
             return StarFragment()
         }
         else{
-            return HomeFragment()
+            return ProfileFragment()
         }
 
     }

@@ -16,7 +16,8 @@
             android:id="@+id/profile_iv"
             android:layout_width="80dp"
             android:layout_height="80dp"
-            tools:srcCompat="@tools:sample/avatars" />
+            android:scaleType="centerCrop"
+            app:srcCompat="@mipmap/ic_launcher_round" />
 
         <TextView
             android:id="@+id/email_tv"

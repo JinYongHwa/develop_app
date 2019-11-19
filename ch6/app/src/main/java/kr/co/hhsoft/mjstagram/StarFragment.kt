@@ -12,10 +12,7 @@ import com.google.firebase.auth.FirebaseAuth
 
 class StarFragment: Fragment() {
 
-    lateinit var profileIv:ImageView
-    lateinit var emailTv:TextView
 
-    lateinit var auth:FirebaseAuth
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -24,10 +21,7 @@ class StarFragment: Fragment() {
     ): View? {
 
         var view=inflater.inflate(R.layout.fragment_star,container,false)
-        profileIv= view.findViewById(R.id.profile_iv)
-        emailTv= view.findViewById(R.id.email_tv)
 
-        auth= FirebaseAuth.getInstance()
 
         return view
     }
@@ -35,7 +29,7 @@ class StarFragment: Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        emailTv.text=auth.currentUser?.email
+
     }
 
 }
