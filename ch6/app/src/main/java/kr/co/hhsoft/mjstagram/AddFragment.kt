@@ -3,7 +3,9 @@ package kr.co.hhsoft.mjstagram
 import android.app.Activity.RESULT_OK
 import android.content.Intent
 import android.content.Intent.ACTION_PICK
+import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -30,6 +32,7 @@ class AddFragment : Fragment() {
     val IMAGE_PICK=1001
 
     lateinit var post:Post
+    var imageUri: Uri? = null
 
 
     override fun onCreateView(
@@ -70,15 +73,29 @@ class AddFragment : Fragment() {
                 Toast.makeText(activity,"문구를 입력해주세요",Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            post.description=description
-            post.userId=auth.currentUser?.email
-            firestore.collection("Post").document().set(post)
-                .addOnSuccessListener {
-                    imageIv.setImageDrawable(activity?.resources?.getDrawable(R.drawable.baseline_add_circle_outline_black_48))
-                    descriptionEt.text.clear()
-                    var mainActivity=activity as MainActivity
-                    mainActivity.moveTab(0)
-                }
+            if(imageUri!=null){
+
+                storage.getReference().child("post").child(UUID.randomUUID().toString()).putFile(imageUri!!)
+                    .addOnSuccessListener {
+                            it->
+                        it.metadata?.reference?.downloadUrl?.addOnSuccessListener {
+                                downloadUrl->
+                            post.imageUrl=downloadUrl.toString()
+
+                            post.description=description
+                            post.userId=auth.currentUser?.email
+
+                            firestore.collection("Post").document().set(post)
+                                .addOnSuccessListener {
+                                    imageIv.setImageDrawable(activity?.resources?.getDrawable(R.drawable.baseline_add_circle_outline_black_48))
+                                    descriptionEt.text.clear()
+                                    var mainActivity=activity as MainActivity
+                                    mainActivity.moveTab(0)
+                                }
+                        }
+                    }
+            }
+
         }
 
     }
@@ -86,20 +103,9 @@ class AddFragment : Fragment() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if(requestCode==IMAGE_PICK&&resultCode==RESULT_OK){
-            var imageUri=data?.data
+            imageUri=data?.data
             imageIv.setImageURI(imageUri)
-            if(imageUri!=null){
 
-                storage.getReference().child("post").child(UUID.randomUUID().toString()).putFile(imageUri)
-                    .addOnSuccessListener {
-                            it->
-                        it.metadata?.reference?.downloadUrl?.addOnSuccessListener {
-                                downloadUrl->
-                            post.imageUrl=downloadUrl.toString()
-
-                        }
-                    }
-            }
         }
     }
 
