@@ -477,6 +477,8 @@ class AddFragment : Fragment() {
     }
 
 }
+```
+
 ### item_feed.xml
 ``` xml
 <?xml version="1.0" encoding="utf-8"?>
