@@ -521,7 +521,7 @@ class AddFragment : Fragment() {
 </androidx.constraintlayout.widget.ConstraintLayout>
 ```
 
-```
+
 ### FeedAdapter
 ``` kt
 class FeedAdapter(var context: Context,var postList:ArrayList<Post> ) :RecyclerView.Adapter<FeedAdapter.ViewHolder>() {
@@ -563,3 +563,46 @@ class FeedAdapter(var context: Context,var postList:ArrayList<Post> ) :RecyclerV
 }
 ```
 ### HomeFragment
+``` kt
+class HomeFragment: Fragment() {
+
+    lateinit var feedRv:RecyclerView
+    lateinit var feedAdapter:FeedAdapter
+    var postList=ArrayList<Post>()
+    lateinit var firestore:FirebaseFirestore
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        var view=inflater.inflate(R.layout.fragment_home,container,false)
+        feedRv=view.findViewById(R.id.feed_rv)
+
+        return view
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        firestore= FirebaseFirestore.getInstance()
+        feedAdapter=FeedAdapter(context!!,postList)
+        feedRv.adapter=feedAdapter
+        feedRv.layoutManager=LinearLayoutManager(context)
+
+        firestore.collection("Post").addSnapshotListener {
+                querySnapshot, firebaseFirestoreException ->
+            if(querySnapshot!=null){
+
+                for(dc in querySnapshot.documentChanges){
+                    var post=dc.document.toObject(Post::class.java)
+
+                    if(dc.type==DocumentChange.Type.ADDED){
+                        postList.add(0,post)
+                    }
+                }
+                feedAdapter.notifyDataSetChanged()
+            }
+        }
+    }
+}
+```
