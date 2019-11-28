@@ -477,4 +477,89 @@ class AddFragment : Fragment() {
     }
 
 }
+### item_feed.xml
+``` xml
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+
+    <LinearLayout
+        android:id="@+id/user_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="10dp">
+
+        <ImageView
+            android:id="@+id/profile_iv"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:scaleType="centerCrop" />
+
+        <TextView
+            android:id="@+id/name_tv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp" />
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/image_iv"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:scaleType="centerCrop"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+
+        app:layout_constraintTop_toBottomOf="@id/user_container" />
+</androidx.constraintlayout.widget.ConstraintLayout>
 ```
+
+```
+### FeedAdapter
+``` kt
+class FeedAdapter(var context: Context,var postList:ArrayList<Post> ) :RecyclerView.Adapter<FeedAdapter.ViewHolder>() {
+
+    var firestore= FirebaseFirestore.getInstance()
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        var view=LayoutInflater.from(context).inflate(R.layout.item_feed,parent,false)
+
+        return ViewHolder(view)
+    }
+
+    override fun getItemCount(): Int {
+        return postList.size
+    }
+
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        holder.bind(postList[position])
+    }
+
+
+    inner class ViewHolder(itemView: View):RecyclerView.ViewHolder(itemView){
+        var profileIv:ImageView=itemView.findViewById(R.id.profile_iv)
+        var nameTv: TextView =itemView.findViewById(R.id.name_tv)
+        var imageIv:ImageView=itemView.findViewById(R.id.image_iv)
+
+        fun bind(post:Post){
+            firestore.collection("User").document(post.userId!!).get()
+                .addOnCompleteListener { task->
+                    var user=task.result?.toObject(User::class.java)
+                    nameTv.text=user?.email
+                    Glide.with(profileIv).load(user?.imageUrl).into(profileIv)
+                }
+            Glide.with(imageIv).load(post.imageUrl).into(imageIv)
+
+
+        }
+    }
+}
+```
+### HomeFragment
