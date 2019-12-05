@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 
 class HomeFragment: Fragment() {
 
@@ -38,8 +39,10 @@ class HomeFragment: Fragment() {
         feedAdapter=FeedAdapter(context!!,postList)
         feedRv.adapter=feedAdapter
         feedRv.layoutManager=LinearLayoutManager(context)
-
-        firestore.collection("Post").addSnapshotListener {
+        postList.clear()
+        firestore.collection("Post")
+            .orderBy("date",Query.Direction.ASCENDING)
+            .addSnapshotListener {
                 querySnapshot, firebaseFirestoreException ->
             if(querySnapshot!=null){
 

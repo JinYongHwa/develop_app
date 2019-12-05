@@ -72,7 +72,7 @@ class ProfileFragment : Fragment() {
         profilePhotoAdapter=ProfilePhotoAdapter(context!!,postList)
         photoLIstRv.adapter=profilePhotoAdapter
         photoLIstRv.layoutManager=GridLayoutManager(context,3)
-
+        postList.clear()
         firestore.collection("Post").whereEqualTo("userId",auth.currentUser?.email!!)
             .orderBy("date", Query.Direction.ASCENDING)
             .addSnapshotListener { querySnapshot, firebaseFirestoreException ->
