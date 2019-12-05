@@ -294,13 +294,51 @@ class MainPageAdapter(fragmentManager: FragmentManager) : FragmentPagerAdapter(f
 ``` kt
 class HomeFragment: Fragment() {
 
+    lateinit var feedRv:RecyclerView
+    lateinit var feedAdapter:FeedAdapter
+    var postList=ArrayList<Post>()
+    lateinit var firestore:FirebaseFirestore
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        return inflater.inflate(R.layout.fragment_home,container,false)
+        var view=inflater.inflate(R.layout.fragment_home,container,false)
+        feedRv=view.findViewById(R.id.feed_rv)
+
+        return view
     }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        firestore= FirebaseFirestore.getInstance()
+        feedAdapter=FeedAdapter(context!!,postList)
+        feedRv.adapter=feedAdapter
+        feedRv.layoutManager=LinearLayoutManager(context)
+        postList.clear()
+        firestore.collection("Post")
+            .orderBy("date",Query.Direction.ASCENDING)
+            .addSnapshotListener {
+                querySnapshot, firebaseFirestoreException ->
+            if(querySnapshot!=null){
+
+                for(dc in querySnapshot.documentChanges){
+                    var post=dc.document.toObject(Post::class.java)
+
+                    if(dc.type==DocumentChange.Type.ADDED){
+                        postList.add(0,post)
+                    }
+                }
+                feedAdapter.notifyDataSetChanged()
+            }
+        }
+
+
+
+    }
+
+
 
 }
 ```
@@ -309,10 +347,17 @@ class HomeFragment: Fragment() {
 class ProfileFragment : Fragment() {
     lateinit var profileIv: ImageView
     lateinit var emailTv: TextView
+    lateinit var photoLIstRv:RecyclerView
+    lateinit var logoutBtn: Button
+
 
     lateinit var auth: FirebaseAuth
     lateinit var firestore:FirebaseFirestore
     lateinit var storage:FirebaseStorage
+
+
+    lateinit var profilePhotoAdapter:ProfilePhotoAdapter
+    var postList=ArrayList<Post>()
 
     var user:User?=null
 
@@ -331,15 +376,38 @@ class ProfileFragment : Fragment() {
 
         var view= inflater.inflate(R.layout.fragment_profile,container,false)
 
+
         profileIv= view.findViewById(R.id.profile_iv)
         emailTv= view.findViewById(R.id.email_tv)
+        photoLIstRv=view.findViewById(R.id.photo_list_rv)
+        logoutBtn=view.findViewById(R.id.logout_btn)
+
         emailTv.text=auth.currentUser?.email
+
 
         return view
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        profilePhotoAdapter=ProfilePhotoAdapter(context!!,postList)
+        photoLIstRv.adapter=profilePhotoAdapter
+        photoLIstRv.layoutManager=GridLayoutManager(context,3)
+        postList.clear()
+        firestore.collection("Post").whereEqualTo("userId",auth.currentUser?.email!!)
+            .orderBy("date", Query.Direction.ASCENDING)
+            .addSnapshotListener { querySnapshot, firebaseFirestoreException ->
+                if(querySnapshot!=null){
+                    for(dc in querySnapshot.documentChanges){
+                        if(dc.type==DocumentChange.Type.ADDED){
+                            var post=dc.document.toObject(Post::class.java)
+                            postList.add(0,post)
+                        }
+                    }
+                    profilePhotoAdapter.notifyDataSetChanged()
+                }
+            }
 
         firestore.collection("User").document(auth.currentUser?.email!!)
             .get().addOnSuccessListener {
@@ -355,6 +423,13 @@ class ProfileFragment : Fragment() {
             var intent= Intent(ACTION_PICK)
             intent.type="image/*"
             startActivityForResult(intent,IMAGE_PICK)
+        }
+
+        logoutBtn.setOnClickListener {
+            auth.signOut()
+            var intent=Intent(context,LoginActivity::class.java)
+            startActivity(intent)
+            activity?.finish()
         }
 
         super.onCreate(savedInstanceState)
