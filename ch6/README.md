@@ -683,3 +683,52 @@ class HomeFragment: Fragment() {
     }
 }
 ```
+
+### item_profile.xml
+``` xml
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="3dp">
+
+    <ImageView
+        android:id="@+id/image_iv"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:scaleType="centerCrop"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        tools:layout_editor_absoluteY="3dp" />
+</androidx.constraintlayout.widget.ConstraintLayout>
+```
+
+### ProfilePhotoAdapter
+``` kt
+class ProfilePhotoAdapter(var context: Context,var postList:ArrayList<Post> ) : RecyclerView.Adapter<ProfilePhotoAdapter.ViewHolder>() {
+    override fun getItemCount(): Int {
+        return postList.size
+    }
+
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        holder.bind(postList[position])
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        var view=LayoutInflater.from(context).inflate(R.layout.item_profile,parent,false)
+        return ViewHolder(view)
+    }
+
+
+    inner class ViewHolder(itemView: View):RecyclerView.ViewHolder(itemView){
+        var imageIv: ImageView =itemView.findViewById(R.id.image_iv)
+
+        fun bind(post:Post){
+            Glide.with(imageIv).load(post.imageUrl).into(imageIv)
+        }
+    }
+}
+```
