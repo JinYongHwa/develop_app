@@ -73,131 +73,129 @@ implementation 'com.google.android.gms:play-services-auth:17.0.0'
 </LinearLayout>
 ```
 
-### LoginActivity.kt
+### MainActivity.kt
 ``` kt
-class LoginActivity : AppCompatActivity() {
-    //Firebase Authentication 관리클래스
-    var auth:FirebaseAuth?=null
-    lateinit var email_et: EditText
-    lateinit var password_et: EditText
-    lateinit var email_login_btn: Button
-    lateinit var google_login_btn: Button
+class MainActivity : AppCompatActivity() {
 
-    //Google로그인 관리클래스
-    var googleSignInClient: GoogleSignInClient?=null
+    lateinit var emailEt: EditText
+    lateinit var passwordEt:EditText
+    lateinit var emailLoginBtn:Button
+    lateinit var googleLoginBtn:Button
 
-    //Google 로그인 요청코드
-    val GOOGLE_LOGIN_CODE=9001
+    lateinit var auth:FirebaseAuth
+
+    lateinit var googleSignClient:GoogleSignInClient
+
+    val GOOGLE_LOGIN_CODE=10001
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_login)
-        auth=FirebaseAuth.getInstance()
-        email_et=findViewById(R.id.email_et)
-        password_et=findViewById(R.id.password_et)
-        email_login_btn=findViewById(R.id.email_login_btn)
-        google_login_btn=findViewById(R.id.google_login_btn)
+        setContentView(R.layout.activity_main)
 
-        email_login_btn.setOnClickListener{createAndLoginEmail()}
-        google_login_btn.setOnClickListener{googleLogin()}
+        auth= FirebaseAuth.getInstance()
 
-        //구글 로그인 옵션
+        emailEt=findViewById(R.id.email_et)
+        passwordEt=findViewById(R.id.password_et)
+        emailLoginBtn=findViewById(R.id.email_login_btn)
+        googleLoginBtn=findViewById(R.id.google_login_btn)
+
         var gso=GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken(getString(R.string.default_web_client_id))
             .requestEmail()
             .build()
 
-        googleSignInClient= GoogleSignIn.getClient(this,gso)
-    }
+        googleSignClient=GoogleSignIn.getClient(this,gso)
 
-    //이메일회원가입 및 로그인 메소드
-    fun createAndLoginEmail(){
+        emailLoginBtn.setOnClickListener {
 
-        auth?.createUserWithEmailAndPassword(email_et.text.toString(),password_et.text.toString())
-            ?.addOnCompleteListener{task->
+            var email=emailEt.text.toString()
+            var password=passwordEt.text.toString()
+            auth.createUserWithEmailAndPassword(email,password)
+                .addOnCompleteListener {
+                    result->
+                        if(result.isSuccessful){
+                            loginSuccess()
+                        }
+                        else if(result.exception?.message.isNullOrEmpty()){
+                            Toast.makeText(this,"로그인중 오류가 발생하였습니다",Toast.LENGTH_SHORT).show()
+                        }
+                        else{
+                            login(email,password)
+                        }
+                }
 
-                //아이디 생성에 성공했을경우
-                if(task.isSuccessful){
-                    moveMainPage(auth?.currentUser)
-                }
-                //로그인시 오류가 발생했을경우
-                else if(task.exception?.message.isNullOrEmpty()){
-                    Toast.makeText(this,"로그인 오류가 발생했습니다 ${task.exception?.message}",Toast.LENGTH_SHORT).show()
-                }
-                //이미 가입된 회원이 있을경우
-                else{
-                    signinEmail()
-                }
         }
 
-    }
-
-    //구글 로그인 요청
-    fun googleLogin(){
-        var signInIntent=googleSignInClient?.signInIntent
-        startActivityForResult(signInIntent,GOOGLE_LOGIN_CODE)
-    }
-
-    //이메일 로그인하기
-    fun signinEmail(){
-        auth?.signInWithEmailAndPassword(email_et.text.toString(),password_et.text.toString())?.addOnCompleteListener{
-            task->
-            if(task.isSuccessful){
-                if(auth!=null){
-                    moveMainPage(auth?.currentUser)
-                }
-            }
-            else if(task.exception?.message?.isNotEmpty()!!){
-                Toast.makeText(this,"로그인에 실패하였습니다",Toast.LENGTH_SHORT).show()
-            }
-            else{
-                Toast.makeText(this,"로그인에 실패하였습니다 ${task.result.toString()}",Toast.LENGTH_SHORT).show()
-            }
-
-
+        googleLoginBtn.setOnClickListener {
+            var signInIntent=googleSignClient.signInIntent
+            startActivityForResult(signInIntent,GOOGLE_LOGIN_CODE)
         }
     }
+    fun login(email:String,password:String){
+        auth.signInWithEmailAndPassword(email,password)
+            .addOnCompleteListener {
+                result->
+                    if(result.isSuccessful){
+                        loginSuccess()
+                    }
+                    else{
+                        Toast.makeText(this,"로그인중 오류가 발생하였습니다",Toast.LENGTH_SHORT).show()
+                    }
+            }
+    }
 
-    //로그인후 MainActivity로 이동
-    fun moveMainPage(user: FirebaseUser?){
-        if(user!=null){
-            var intent: Intent= Intent(this,MainActivity::class.java)
+
+    fun loginSuccess(){
+        if(auth.currentUser!=null){
+            var intent= Intent(this,SecondActivity::class.java)
             startActivity(intent)
-            finish()
         }
     }
 
-    //Google 로그인 완료시 처리
-    fun firebaseAuthWithGoogle(account: GoogleSignInAccount){
-        var credetial=GoogleAuthProvider.getCredential(account.idToken,null)
-        auth?.signInWithCredential(credetial)
-            ?.addOnCompleteListener{task->
-                if(task.isSuccessful){
-                    moveMainPage(auth?.currentUser)
+    private fun firebaseAuthWithGoogle(idToken: String) {
+        val credential = GoogleAuthProvider.getCredential(idToken, null)
+        auth.signInWithCredential(credential)
+            .addOnCompleteListener(this) { task ->
+                if (task.isSuccessful) {
+                    // Sign in success, update UI with the signed-in user's information
+                    val user = auth.currentUser
+                    loginSuccess()
+                } else {
+                    // If sign in fails, display a message to the user.
+
+                    loginSuccess()
                 }
+
+                // ...
             }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
-        //구글로그인 완료시
         if(requestCode==GOOGLE_LOGIN_CODE){
-            var result= Auth.GoogleSignInApi.getSignInResultFromIntent(data)
-            if(result.isSuccess){
-                var account=result.signInAccount
-                firebaseAuthWithGoogle(account!!)
+            val task = GoogleSignIn.getSignedInAccountFromIntent(data)
+            try {
+                // Google Sign In was successful, authenticate with Firebase
+                val account = task.getResult(ApiException::class.java)!!
+
+                firebaseAuthWithGoogle(account.idToken!!)
+            } catch (e: ApiException) {
+                // Google Sign In failed, update UI appropriately
+
+                // ...
             }
         }
-
     }
+
+
 }
 ```
 
-### MainActivity.kt
+### SecondActivity.kt
 ``` kt
-class MainActivity: AppCompatActivity() {
+class SecondActivity: AppCompatActivity() {
 
     lateinit var emailTv: TextView
     lateinit var auth:FirebaseAuth
